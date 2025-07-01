@@ -3,7 +3,13 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
+
+// Parse JSON bodies
 app.use(express.json());
+
+// Parse URL-encoded form bodies (like Sinatra expects)
+app.use(express.urlencoded({ extended: true }));
+
 app.use(cors());
 
 // Secure with an API key from your .env file
@@ -38,14 +44,18 @@ app.post('/connection_token', authenticate, async (req, res) => {
 // 2. Create PaymentIntent endpoint for Stripe Terminal
 app.post('/create_payment_intent', authenticate, async (req, res) => {
   try {
-    const { amount, currency } = req.body;
+    const { amount, currency, description, receipt_email } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
       capture_method: 'automatic', // or 'manual' if you want to capture later
+      description: description || 'Terminal Transaction',
+      receipt_email: receipt_email || undefined,
+      payment_method_types: ['card_present'], // important for Terminal
     });
-    res.json(paymentIntent);
+    // Return JSON matching old backend's format
+    res.json({ intent: paymentIntent.id, secret: paymentIntent.client_secret });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -54,14 +64,14 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
 // 3. Capture PaymentIntent endpoint (if you use manual capture)
 app.post('/capture_payment_intent', authenticate, async (req, res) => {
   try {
-    const { payment_intent_id } = req.body;
-    const paymentIntent = await stripe.paymentIntents.capture(payment_intent_id);
-    res.json(paymentIntent);
+    const { payment_intent_id, amount_to_capture } = req.body;
+    const params = amount_to_capture ? { amount_to_capture } : {};
+    const paymentIntent = await stripe.paymentIntents.capture(payment_intent_id, params);
+    res.json({ intent: paymentIntent.id, secret: paymentIntent.client_secret });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 // 4. (Optional) Health check endpoint
 app.get('/', (req, res) => res.send('Stripe Terminal backend running.'));
