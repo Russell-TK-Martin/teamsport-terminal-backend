@@ -51,8 +51,19 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
   }
 });
 
+// 3. Capture PaymentIntent endpoint (if you use manual capture)
+app.post('/capture_payment_intent', authenticate, async (req, res) => {
+  try {
+    const { payment_intent_id } = req.body;
+    const paymentIntent = await stripe.paymentIntents.capture(payment_intent_id);
+    res.json(paymentIntent);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-// 3. (Optional) Health check endpoint
+
+// 4. (Optional) Health check endpoint
 app.get('/', (req, res) => res.send('Stripe Terminal backend running.'));
 
 const PORT = process.env.PORT || 4242;
