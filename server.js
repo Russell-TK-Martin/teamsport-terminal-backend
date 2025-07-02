@@ -43,6 +43,7 @@ app.post('/connection_token', authenticate, async (req, res) => {
 
 // 2. Create PaymentIntent endpoint for Stripe Terminal
 app.post('/create_payment_intent', authenticate, async (req, res) => {
+  console.log('POST /create_payment_intent', { body: req.body, headers: req.headers });
   try {
     const { amount, currency, description, receipt_email } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
