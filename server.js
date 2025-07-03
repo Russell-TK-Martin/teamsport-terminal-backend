@@ -74,7 +74,47 @@ app.post('/capture_payment_intent', authenticate, async (req, res) => {
   }
 });
 
-// 4. (Optional) Health check endpoint
+// 4. Update PaymentIntent with receipt email (for sending receipt after payment)
+app.post('/update_payment_intent', authenticate, async (req, res) => {
+  try {
+    const { payment_intent_id, receipt_email } = req.body;
+    if (!payment_intent_id || !receipt_email) {
+      return res.status(400).json({ error: "Missing payment_intent_id or receipt_email" });
+    }
+    const paymentIntent = await stripe.paymentIntents.update(payment_intent_id, {
+      receipt_email,
+    });
+    res.json({ success: true, paymentIntent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 5. Returns the total amount (in cents) of all successful PaymentIntents today
+app.get('/transactions_today', authenticate, async (req, res) => {
+  try {
+    const now = new Date();
+    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const created = {
+      gte: Math.floor(midnight.getTime() / 1000), // UNIX timestamp in seconds
+    };
+    const paymentIntents = await stripe.paymentIntents.list({
+      limit: 500, // adjust if you expect more than 500 per day
+      created,
+    });
+
+    // Sum the amounts for successful payments
+    const total = paymentIntents.data
+      .filter(pi => pi.status === 'succeeded')
+      .reduce((sum, pi) => sum + pi.amount, 0);
+
+    res.json({ total, currency: paymentIntents.data[0]?.currency || "eur" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. (Optional) Health check endpoint
 app.get('/', (req, res) => res.send('Stripe Terminal backend running.'));
 
 const PORT = process.env.PORT || 4242;
