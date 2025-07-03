@@ -118,6 +118,11 @@ app.get('/transactions_today', authenticate, async (req, res) => {
 app.post('/transactions_for_terminal', authenticate, async (req, res) => {
   try {
     const { start, end, terminal_id } = req.body;
+    // Log the incoming request for debugging
+    console.log("Received request to fetch transactions for terminal:");
+    console.log(`Start Date: ${start}`);
+    console.log(`End Date: ${end}`);
+    console.log(`Terminal ID: ${terminal_id}`);
     if (!start || !end || !terminal_id) {
       return res.status(400).json({ error: 'Missing start, end, or terminal_id' });
     }
@@ -127,6 +132,10 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       gte: Math.floor(new Date(start).getTime() / 1000),
       lte: Math.floor(new Date(end).getTime() / 1000),
     };
+
+    // Log the converted timestamps for verification
+    console.log(`Converted Start Timestamp: ${created.gte}`);
+    console.log(`Converted End Timestamp: ${created.lte}`);
 
     // Fetch up to 500 transactions in range (adjust limit as needed)
     const paymentIntents = await stripe.paymentIntents.list({
@@ -156,6 +165,9 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       const readerId = charge?.payment_method_details?.card_present?.reader;
       return pi.status === 'succeeded' && readerId === terminal_id;
     });
+
+     // Log the filtered results (optional)
+    console.log(`Found ${filtered.length} transactions for terminal ${terminal_id}`);
 
     // Optionally, sum amounts or return all details
     const total = filtered.reduce((sum, pi) => sum + pi.amount, 0);
