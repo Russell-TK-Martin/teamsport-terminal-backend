@@ -99,7 +99,7 @@ app.get('/transactions_today', authenticate, async (req, res) => {
       gte: Math.floor(midnight.getTime() / 1000), // UNIX timestamp in seconds
     };
     const paymentIntents = await stripe.paymentIntents.list({
-      limit: 500, // adjust if you expect more than 500 per day
+      limit: 100, // adjust if you expect more than 100 per day
       created,
     });
 
@@ -114,7 +114,64 @@ app.get('/transactions_today', authenticate, async (req, res) => {
   }
 });
 
-// 6. (Optional) Health check endpoint
+ // 6. Get the number of transactions 
+app.post('/transactions_for_terminal', authenticate, async (req, res) => {
+  try {
+    const { start, end, terminal_id } = req.body;
+    if (!start || !end || !terminal_id) {
+      return res.status(400).json({ error: 'Missing start, end, or terminal_id' });
+    }
+
+    // Convert start/end ISO strings to UNIX timestamps in seconds
+    const created = {
+      gte: Math.floor(new Date(start).getTime() / 1000),
+      lte: Math.floor(new Date(end).getTime() / 1000),
+    };
+
+    // Fetch up to 500 transactions in range (adjust limit as needed)
+    const paymentIntents = await stripe.paymentIntents.list({
+      created,
+      limit: 500,
+    });
+
+        // LOGGING: Show all payment intents, their status, and reader id for debugging
+    console.log("Filtering for reader/terminal_id:", terminal_id);
+    console.log(
+      paymentIntents.data.map((pi) => {
+        const charge = pi.charges?.data[0];
+        return {
+          id: pi.id,
+          status: pi.status,
+          created: pi.created,
+          amount: pi.amount,
+          reader: charge?.payment_method_details?.card_present?.reader,
+          currency: pi.currency,
+        };
+      })
+    );
+
+    // Filter for this terminal only
+    const filtered = paymentIntents.data.filter((pi) => {
+      const charge = pi.charges?.data[0];
+      const readerId = charge?.payment_method_details?.card_present?.reader;
+      return pi.status === 'succeeded' && readerId === terminal_id;
+    });
+
+    // Optionally, sum amounts or return all details
+    const total = filtered.reduce((sum, pi) => sum + pi.amount, 0);
+
+    res.json({
+      total,
+      currency: filtered[0]?.currency || "eur",
+      count: filtered.length,
+      transactions: filtered, // Or just return the total/count if you prefer
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 7. (Optional) Health check endpoint
 app.get('/', (req, res) => res.send('Stripe Terminal backend running.'));
 
 const PORT = process.env.PORT || 4242;
