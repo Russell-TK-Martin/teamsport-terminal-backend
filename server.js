@@ -153,9 +153,9 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
 
     // Filter for this terminal only
     const filtered = paymentIntents.data.filter((pi) => {
-      // const charge = pi.charges?.data[0];
-      // const readerId = charge?.payment_method_details?.card_present?.reader;
-      return pi.status === 'succeeded';
+      const charge = pi.charges?.data[0];
+      const readerId = charge?.payment_method_details?.card_present?.reader;
+      return pi.status === 'succeeded'&& readerId === terminal_id;
     });
 
      // Log the filtered results (optional)
