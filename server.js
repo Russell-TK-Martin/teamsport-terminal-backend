@@ -143,21 +143,13 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       limit: 500,
     });
 
-        // LOGGING: Show all payment intents, their status, and reader id for debugging
+     // LOGGING: Show all payment intents, their status, and reader id for debugging
     console.log("Filtering for reader/terminal_id:", terminal_id);
-    console.log(
-      paymentIntents.data.map((pi) => {
-        const charge = pi.charges?.data[0];
-        return {
-          id: pi.id,
-          status: pi.status,
-          created: pi.created,
-          amount: pi.amount,
-          reader: charge?.payment_method_details?.card_present?.reader,
-          currency: pi.currency,
-        };
-      })
-    );
+    paymentIntents.data.forEach((pi) => {
+      const charge = pi.charges?.data[0];
+      const readerId = charge?.payment_method_details?.card_present?.reader;
+      console.log(`Transaction ID: ${pi.id}, Reader ID: ${readerId}, Amount: ${pi.amount}, Status: ${pi.status}`);
+    });
 
     // Filter for this terminal only
     const filtered = paymentIntents.data.filter((pi) => {
