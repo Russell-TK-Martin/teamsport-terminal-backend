@@ -148,7 +148,11 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
     });
 
         // LOGGING: Show all payment intents, their status, and reader id for debugging
+   if (terminal_label) {
+    console.log("Filtering for terminal_label:", terminal_label);
+    } else {
     console.log("Filtering for reader/terminal_id:", terminal_id);
+  }
     console.log(
       paymentIntents.data.map((pi) => {
         const charge = pi.charges?.data[0];
@@ -171,21 +175,19 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       console.log(`Transaction ID: ${pi.id}, Reader ID: ${readerId}, Amount: ${pi.amount}, Status: ${pi.status}`);
     });
 
-    //Filter for this terminal
-    const filtered = paymentIntents.data.filter((pi) => {
-    if (terminal_label) {
-      // New logic: filter by metadata (label)
-      return pi.status === 'succeeded' && pi.metadata.terminal_label === terminal_label;
-    } else if (terminal_id) {
-      // Old logic: filter by readerId
-      const charge = pi.charges?.data[0];
-      const readerId = charge?.payment_method_details?.card_present?.reader;
-      return pi.status === 'succeeded' && readerId === terminal_id;
-    }
-    // fallback: all succeeded
-    return pi.status === 'succeeded';
-    });
-
+  const filtered = paymentIntents.data.filter((pi) => {
+  if (terminal_label) {
+    // Filter by metadata label (NEW LOGIC)
+    return pi.status === 'succeeded' && pi.metadata.terminal_label === terminal_label;
+  } else if (terminal_id) {
+    // Fallback: filter by readerId (OLD LOGIC)
+    const charge = pi.charges?.data[0];
+    const readerId = charge?.payment_method_details?.card_present?.reader;
+    return pi.status === 'succeeded' && readerId === terminal_id;
+  }
+  // Fallback: all succeeded
+  return pi.status === 'succeeded';
+});
 
      // Log the filtered results (optional)
     console.log(`Found ${filtered.length} transactions for terminal ${terminal_id}`);
