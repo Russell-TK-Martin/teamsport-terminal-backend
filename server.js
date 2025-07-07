@@ -127,8 +127,8 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
     console.log(`Start Date: ${start}`);
     console.log(`End Date: ${end}`);
     console.log(`Terminal ID: ${terminal_id}`);
-    if (!start || !end || !terminal_id) {
-      return res.status(400).json({ error: 'Missing start, end, or terminal_id' });
+    if (!start || !end || (!terminal_id && !terminal_label)) {
+      return res.status(400).json({ error: 'Missing start, end, or terminal_id or terminal_label' });
     }
 
     // Convert start/end ISO strings to UNIX timestamps in seconds
