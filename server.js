@@ -45,7 +45,7 @@ app.post('/connection_token', authenticate, async (req, res) => {
 app.post('/create_payment_intent', authenticate, async (req, res) => {
   console.log('POST /create_payment_intent', { body: req.body, headers: req.headers });
   try {
-    const { amount, currency, description, receipt_email } = req.body;
+    const { amount, currency, description, receipt_email, terminal_label } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
@@ -54,7 +54,11 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
       description: description || 'Terminal Transaction',
       receipt_email: receipt_email || undefined,
       payment_method_types: ['card_present'], // important for Terminal
+      metadata: {
+        terminal_label: terminal_label || ''
+      }
     });
+
     // Return JSON matching old backend's format
     res.json({ intent: paymentIntent.id, secret: paymentIntent.client_secret });
   } catch (err) {
@@ -117,7 +121,7 @@ app.get('/transactions_today', authenticate, async (req, res) => {
  // 6. Get the number of transactions 
 app.post('/transactions_for_terminal', authenticate, async (req, res) => {
   try {
-    const { start, end, terminal_id } = req.body;
+    const { start, end, terminal_id, terminal_label } = req.body;
     // Log the incoming request for debugging
     console.log("Received request to fetch transactions for terminal:");
     console.log(`Start Date: ${start}`);
@@ -143,7 +147,23 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       limit: 500,
     });
 
-     // LOGGING: Show all payment intents, their status, and reader id for debugging
+        // LOGGING: Show all payment intents, their status, and reader id for debugging
+    console.log("Filtering for reader/terminal_id:", terminal_id);
+    console.log(
+      paymentIntents.data.map((pi) => {
+        const charge = pi.charges?.data[0];
+        return {
+          id: pi.id,
+          status: pi.status,
+          created: pi.created,
+          amount: pi.amount,
+          reader: charge?.payment_method_details?.card_present?.reader,
+          currency: pi.currency,
+        };
+      })
+    );
+
+      // LOGGING: Show all payment intents, their status, and reader id for debugging
     console.log("Filtering for reader/terminal_id:", terminal_id);
     paymentIntents.data.forEach((pi) => {
       const charge = pi.charges?.data[0];
@@ -151,12 +171,21 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
       console.log(`Transaction ID: ${pi.id}, Reader ID: ${readerId}, Amount: ${pi.amount}, Status: ${pi.status}`);
     });
 
-    // Filter for this terminal only
+    //Filter for this terminal
     const filtered = paymentIntents.data.filter((pi) => {
+    if (terminal_label) {
+      // New logic: filter by metadata (label)
+      return pi.status === 'succeeded' && pi.metadata.terminal_label === terminal_label;
+    } else if (terminal_id) {
+      // Old logic: filter by readerId
       const charge = pi.charges?.data[0];
       const readerId = charge?.payment_method_details?.card_present?.reader;
-      return pi.status === 'succeeded'&& readerId === terminal_id;
+      return pi.status === 'succeeded' && readerId === terminal_id;
+    }
+    // fallback: all succeeded
+    return pi.status === 'succeeded';
     });
+
 
      // Log the filtered results (optional)
     console.log(`Found ${filtered.length} transactions for terminal ${terminal_id}`);
