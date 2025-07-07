@@ -94,31 +94,7 @@ app.post('/update_payment_intent', authenticate, async (req, res) => {
   }
 });
 
-// 5. Returns the total amount (in cents) of all successful PaymentIntents today
-app.get('/transactions_today', authenticate, async (req, res) => {
-  try {
-    const now = new Date();
-    const midnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const created = {
-      gte: Math.floor(midnight.getTime() / 1000), // UNIX timestamp in seconds
-    };
-    const paymentIntents = await stripe.paymentIntents.list({
-      limit: 100, // adjust if you expect more than 100 per day
-      created,
-    });
-
-    // Sum the amounts for successful payments
-    const total = paymentIntents.data
-      .filter(pi => pi.status === 'succeeded')
-      .reduce((sum, pi) => sum + pi.amount, 0);
-
-    res.json({ total, currency: paymentIntents.data[0]?.currency || "eur" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// 6. Get the number of transactions 
+// 5. Get the number of transactions 
 app.post('/transactions_for_terminal', authenticate, async (req, res) => {
   try {
     const { start, end, terminal_id, terminal_label } = req.body;
@@ -190,7 +166,7 @@ app.post('/transactions_for_terminal', authenticate, async (req, res) => {
   }
 });
 
-// 7. (Optional) Health check endpoint
+// 6. (Optional) Health check endpoint
 app.get('/', (req, res) => res.send('Stripe Terminal backend running.'));
 
 const PORT = process.env.PORT || 4242;
