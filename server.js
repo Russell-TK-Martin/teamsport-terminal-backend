@@ -56,7 +56,7 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
       payment_method_types: ['card_present'], // important for Terminal
       metadata: {
         terminal_label: terminal_label || '',
-        staffName: staffName || 'Unknown'
+        staff_name: staffName || 'Unknown'
       }
     });
 
