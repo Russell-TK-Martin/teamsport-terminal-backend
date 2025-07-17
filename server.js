@@ -45,7 +45,7 @@ app.post('/connection_token', authenticate, async (req, res) => {
 app.post('/create_payment_intent', authenticate, async (req, res) => {
   console.log('POST /create_payment_intent', { body: req.body, headers: req.headers });
   try {
-    const { amount, currency, description, receipt_email, terminal_label } = req.body;
+    const { amount, currency, description, receipt_email, terminal_label, staffName } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
@@ -55,7 +55,8 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
       receipt_email: receipt_email || undefined,
       payment_method_types: ['card_present'], // important for Terminal
       metadata: {
-        terminal_label: terminal_label || ''
+        terminal_label: terminal_label || '',
+        staffName: staffName || 'Unknown'
       }
     });
 
