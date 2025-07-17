@@ -48,7 +48,7 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
     const { amount, currency, description, receipt_email, terminal_label, staffName } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,
+      amount: amountNumber,
       currency,
       capture_method: 'automatic', // or 'manual' if you want to capture later
       description: description || 'Terminal Transaction',
