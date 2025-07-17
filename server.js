@@ -47,6 +47,7 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
   try {
     const { amount, currency, description, receipt_email, terminal_label, staffName } = req.body;
     // Add any extra params you need here (metadata, capture_method, etc.)
+    console.log('Creating PI. staffName:', staffName, 'terminal_label:', terminal_label);
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
       currency,
@@ -59,7 +60,7 @@ app.post('/create_payment_intent', authenticate, async (req, res) => {
         staff_name: staffName || 'Unknown'
       }
     });
-
+    console.log('PaymentIntent created. Metadata:', paymentIntent.metadata);
     // Return JSON matching old backend's format
     res.json({ intent: paymentIntent.id, secret: paymentIntent.client_secret });
   } catch (err) {
