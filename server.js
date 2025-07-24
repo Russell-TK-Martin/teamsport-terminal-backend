@@ -96,7 +96,8 @@ app.post('/update_payment_intent', authenticate, async (req, res) => {
   }
 });
 
-// 5. Get the number of transactions 
+// 5. Get the number of transactions
+console.log("BODY:", req.body);
 app.post('/transactions_for_terminal', authenticate, async (req, res) => {
   try {
     const { start, end, staff_name } = req.body;
